@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a84ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PLC Filter">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>PLC Filter</title>
+<style>
+:root{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color-scheme:light dark;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom));background:#f4f4f7;color:#111}
+.card{background:white;border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+h1{font-size:22px;margin:0 0 14px}
+label{display:block;font-size:13px;font-weight:600;margin:10px 0 5px}
+input,select,textarea,button{
+  width:100%;box-sizing:border-box;font:inherit;border-radius:10px;border:1px solid #ccc;padding:11px;background:white;color:#111
+}
+textarea{min-height:80px;resize:vertical}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
+button{font-weight:600;min-height:44px;background:#fff}
+.primary{background:#0a84ff;color:white;border-color:#0a84ff}
+.danger{color:#b00020}
+.small{font-size:12px;color:#666;line-height:1.4}
+.record{padding:10px 0;border-bottom:1px solid #ddd}
+.record:last-child{border-bottom:none}
+.record b{display:block}
+.record button{margin-top:7px}
+.toggle{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
+.toggle label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500}
+.toggle input{width:auto}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#search{margin-bottom:8px}
+.badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:999px;background:#e8f2ff;color:#0a5fb4;margin-left:6px}
+@media (prefers-color-scheme:dark){
+ body{background:#111;color:#fff}
+ .card,input,select,textarea,button{background:#1c1c1e;color:#fff;border-color:#444}
+ .small{color:#aaa}
+ .record{border-color:#333}
+ .badge{background:#17324a;color:#8cc7ff}
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>PLC Filter <span class="badge" id="offlineBadge">offline-fähig</span></h1>
+
+  <label>Name</label><input id="name" autocomplete="name">
+  <label>Adresse</label><input id="address" autocomplete="street-address">
+  <label>Ort</label><input id="city" autocomplete="address-level2">
+  <label>Telefon</label><input id="phone" inputmode="tel" autocomplete="tel">
+  <label>Zählernummer</label><input id="meter" inputmode="numeric" maxlength="7">
+  <label>Störquelle</label><input id="source">
+
+  <label>Filtertyp</label>
+  <select id="filter">
+    <option>Steckdosenfilter</option>
+    <option>16A Hutschienenfilter</option>
+    <option>35A Hutschienenfilter</option>
+    <option>45A Hutschienenfilter</option>
+    <option>63A Hutschienenfilter</option>
+  </select>
+
+  <label>Ausgabedatum</label>
+  <input id="date" type="date">
+
+  <div class="toggle">
+    <label><input id="billed" type="checkbox"> Verrechnet</label>
+    <label><input id="loaned" type="checkbox"> Geliehen</label>
+  </div>
+
+  <label>Zusatzinfo</label><textarea id="info"></textarea>
+
+  <div class="actions">
+    <button id="newBtn">Neu</button>
+    <button id="deleteBtn" class="danger">Löschen</button>
+    <button id="saveBtn" class="primary">Speichern</button>
+  </div>
+  <p id="status" class="small"></p>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <button id="exportBtn">CSV exportieren</button>
+    <button id="importBtn">CSV importieren</button>
+  </div>
+  <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
+  <p class="small">Die Datensätze werden lokal auf diesem Gerät gespeichert. Über CSV kannst du sie mit der PC-Version abgleichen.</p>
+</div>
+
+<div class="card">
+  <input id="search" placeholder="Suchen …">
+  <div id="list"></div>
+</div>
+
+<script>
+const FIELDS=["Name","Adresse","Ort","Telefon","Zählernummer","Störquelle","Filtertyp","Ausgabedatum","Verrechnet","Geliehen","Zusatzinfo"];
+const KEY="plc_filter_records_v1";
+let records=JSON.parse(localStorage.getItem(KEY)||"[]");
+let editIndex=null;
+
+const $=id=>document.getElementById(id);
+const els={
+ name:$("name"),address:$("address"),city:$("city"),phone:$("phone"),meter:$("meter"),
+ source:$("source"),filter:$("filter"),date:$("date"),billed:$("billed"),loaned:$("loaned"),
+ info:$("info"),status:$("status"),list:$("list"),search:$("search")
+};
+
+function todayISO(){
+ const d=new Date(),p=n=>String(n).padStart(2,"0");
+ return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+}
+function isoToDE(s){
+ if(!s)return "";
+ const [y,m,d]=s.split("-");
+ return `${d}.${m}.${y}`;
+}
+function deToISO(s){
+ const m=s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+ return m?`${m[3]}-${m[2]}-${m[1]}`:"";
+}
+function saveLocal(){localStorage.setItem(KEY,JSON.stringify(records));}
+function newRecord(){
+ editIndex=null;
+ for(const k of ["name","address","city","phone","meter","source","info"]) els[k].value="";
+ els.filter.selectedIndex=0;
+ els.date.value=todayISO();
+ els.billed.checked=false; els.loaned.checked=false;
+ els.status.textContent="Neuer Eintrag";
+}
+function getForm(){
+ return {
+  "Name":els.name.value.trim(),
+  "Adresse":els.address.value.trim(),
+  "Ort":els.city.value.trim(),
+  "Telefon":els.phone.value.trim(),
+  "Zählernummer":els.meter.value.trim(),
+  "Störquelle":els.source.value.trim(),
+  "Filtertyp":els.filter.value,
+  "Ausgabedatum":isoToDE(els.date.value),
+  "Verrechnet":els.billed.checked?"Ja":"Nein",
+  "Geliehen":els.loaned.checked?"Ja":"Nein",
+  "Zusatzinfo":els.info.value.trim()
+ };
+}
+function setForm(r){
+ els.name.value=r.Name||"";
+ els.address.value=r.Adresse||"";
+ els.city.value=r.Ort||"";
+ els.phone.value=r.Telefon||"";
+ els.meter.value=r["Zählernummer"]||"";
+ els.source.value=r["Störquelle"]||"";
+ els.filter.value=r.Filtertyp||"Steckdosenfilter";
+ els.date.value=deToISO(r.Ausgabedatum||"")||todayISO();
+ els.billed.checked=(r.Verrechnet||"").toLowerCase()==="ja";
+ els.loaned.checked=(r.Geliehen||"").toLowerCase()==="ja";
+ els.info.value=r.Zusatzinfo||"";
+}
+function saveRecord(){
+ const r=getForm();
+ if(r["Zählernummer"] && !/^\d{7}$/.test(r["Zählernummer"])){
+  els.status.textContent="Zählernummer muss genau 7 Ziffern haben.";
+  return;
+ }
+ if(editIndex===null) records.push(r); else records[editIndex]=r;
+ saveLocal(); render(); newRecord(); els.status.textContent="Gespeichert.";
+}
+function deleteRecord(){
+ if(editIndex===null){els.status.textContent="Zuerst einen Eintrag aus der Liste öffnen.";return;}
+ if(confirm("Eintrag wirklich löschen?")){
+  records.splice(editIndex,1);saveLocal();render();newRecord();els.status.textContent="Gelöscht.";
+ }
+}
+function openRecord(i){
+ editIndex=i;setForm(records[i]);els.status.textContent="Eintrag wird bearbeitet.";
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+function render(){
+ const q=els.search.value.trim().toLowerCase();
+ els.list.innerHTML="";
+ records.forEach((r,i)=>{
+  const hay=Object.values(r).join(" ").toLowerCase();
+  if(q && !hay.includes(q))return;
+  const div=document.createElement("div");div.className="record";
+  div.innerHTML=`<b>${escapeHTML(r.Name||"(ohne Name)")}</b>
+  <span class="small">${escapeHTML(r.Ort||"")} · ${escapeHTML(r["Zählernummer"]||"")} · ${escapeHTML(r.Filtertyp||"")} · ${escapeHTML(r.Ausgabedatum||"")}</span>`;
+  const b=document.createElement("button");b.textContent="Öffnen";b.addEventListener("click",()=>openRecord(i));
+  div.appendChild(b);els.list.appendChild(div);
+ });
+ if(!els.list.children.length)els.list.innerHTML='<span class="small">Keine Einträge gefunden.</span>';
+}
+function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function csvEscape(v){
+ v=String(v??"");
+ return /[;"\n\r]/.test(v)?`"${v.replace(/"/g,'""')}"`:v;
+}
+function exportCSV(){
+ const rows=[FIELDS.join(";")];
+ for(const r of records) rows.push(FIELDS.map(f=>csvEscape(r[f]||"")).join(";"));
+ const blob=new Blob(["\ufeff"+rows.join("\r\n")],{type:"text/csv;charset=utf-8"});
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="PLC-Filter.csv";
+ document.body.appendChild(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function parseCSV(text){
+ text=text.replace(/^\uFEFF/,"");
+ const rows=[];let row=[],field="",q=false;
+ for(let i=0;i<text.length;i++){
+  const c=text[i],n=text[i+1];
+  if(q){
+   if(c=='"'&&n=='"'){field+='"';i++;}
+   else if(c=='"')q=false; else field+=c;
+  }else{
+   if(c=='"')q=true;
+   else if(c==";"){row.push(field);field="";}
+   else if(c=="\n"){row.push(field.replace(/\r$/,""));rows.push(row);row=[];field="";}
+   else field+=c;
+  }
+ }
+ if(field.length||row.length){row.push(field);rows.push(row);}
+ return rows;
+}
+async function importCSV(file){
+ const text=await file.text(), rows=parseCSV(text);
+ if(!rows.length)return;
+ const headers=rows[0];
+ const imported=rows.slice(1).filter(r=>r.some(x=>x!=="")).map(r=>{
+  const o={};headers.forEach((h,i)=>o[h]=r[i]||"");return o;
+ });
+ if(confirm(`${imported.length} Einträge importieren und vorhandene Daten ersetzen?`)){
+  records=imported;saveLocal();render();newRecord();els.status.textContent="CSV importiert.";
+ }
+}
+$("newBtn").addEventListener("click",newRecord);
+$("saveBtn").addEventListener("click",saveRecord);
+$("deleteBtn").addEventListener("click",deleteRecord);
+$("exportBtn").addEventListener("click",exportCSV);
+$("importBtn").addEventListener("click",()=>$("fileInput").click());
+$("fileInput").addEventListener("change",e=>{if(e.target.files[0])importCSV(e.target.files[0]);e.target.value="";});
+els.search.addEventListener("input",render);
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));
+}
+window.addEventListener("online",()=>{ $("offlineBadge").textContent="online"; });
+window.addEventListener("offline",()=>{ $("offlineBadge").textContent="offline"; });
+
+newRecord();render();
+</script>
+</body>
+</html>
