@@ -39,12 +39,39 @@ button{font-weight:600;min-height:44px;background:#fff}
 .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 #search{margin-bottom:8px}
 .badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:999px;background:#e8f2ff;color:#0a5fb4;margin-left:6px}
+
+.summary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
+  align-items:flex-end;justify-content:center;padding:16px;z-index:9999
+}
+.modal-backdrop.open{display:flex}
+.modal{
+  width:min(680px,100%);max-height:85vh;overflow:auto;
+  background:#fff;color:#111;border-radius:18px;padding:16px;
+  box-shadow:0 8px 30px rgba(0,0,0,.25)
+}
+.modal h2{margin:0 0 12px;font-size:20px}
+.summary-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.summary-item{padding:9px 0;border-bottom:1px solid #e5e5ea}
+.summary-item:last-child{border-bottom:none}
+.summary-label{font-size:12px;font-weight:700;color:#666;margin-bottom:2px}
+.summary-value{white-space:pre-wrap;word-break:break-word}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+@media (min-width:560px){
+ .summary-grid{grid-template-columns:1fr 1fr}
+ .summary-item.full{grid-column:1 / -1}
+}
+
 @media (prefers-color-scheme:dark){
  body{background:#111;color:#fff}
  .card,input,select,textarea,button{background:#1c1c1e;color:#fff;border-color:#444}
  .small{color:#aaa}
  .record{border-color:#333}
  .badge{background:#17324a;color:#8cc7ff}
+ .modal{background:#1c1c1e;color:#fff}
+ .summary-item{border-color:#333}
+ .summary-label{color:#aaa}
 }
 </style>
 </head>
@@ -98,6 +125,18 @@ button{font-weight:600;min-height:44px;background:#fff}
 <div class="card">
   <input id="search" placeholder="Suchen …">
   <div id="list"></div>
+</div>
+
+
+<div id="summaryModal" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+    <h2 id="summaryTitle">Datensatz</h2>
+    <div id="summaryContent" class="summary-grid"></div>
+    <div class="modal-actions">
+      <button id="summaryEditBtn">Bearbeiten</button>
+      <button id="summaryCloseBtn" class="primary">Schließen</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -178,8 +217,50 @@ function deleteRecord(){
   records.splice(editIndex,1);saveLocal();render();newRecord();els.status.textContent="Gelöscht.";
  }
 }
-function openRecord(i){
- editIndex=i;setForm(records[i]);els.status.textContent="Eintrag wird bearbeitet.";
+let summaryIndex=null;
+
+function openSummary(i){
+ summaryIndex=i;
+ const r=records[i];
+ const content=$("summaryContent");
+ content.innerHTML="";
+
+ const fields=[
+  ["Name","Name"],["Adresse","Adresse"],["Ort","Ort"],["Telefon","Telefon"],
+  ["Zählernummer","Zählernummer"],["Störquelle","Störquelle"],["Filtertyp","Filtertyp"],
+  ["Ausgabedatum","Ausgabedatum"],["Verrechnet","Verrechnet"],["Geliehen","Geliehen"],
+  ["Zusatzinfo","Zusatzinfo"]
+ ];
+
+ for(const [label,key] of fields){
+  const item=document.createElement("div");
+  item.className="summary-item"+(key==="Zusatzinfo"?" full":"");
+  const l=document.createElement("div");
+  l.className="summary-label";
+  l.textContent=label;
+  const v=document.createElement("div");
+  v.className="summary-value";
+  v.textContent=r[key] || "—";
+  item.appendChild(l);
+  item.appendChild(v);
+  content.appendChild(item);
+ }
+
+ $("summaryTitle").textContent=r.Name || "Datensatz";
+ $("summaryModal").classList.add("open");
+ $("summaryModal").setAttribute("aria-hidden","false");
+}
+
+function closeSummary(){
+ $("summaryModal").classList.remove("open");
+ $("summaryModal").setAttribute("aria-hidden","true");
+}
+
+function editRecord(i){
+ editIndex=i;
+ setForm(records[i]);
+ els.status.textContent="Eintrag wird bearbeitet.";
+ closeSummary();
  window.scrollTo({top:0,behavior:"smooth"});
 }
 function render(){
@@ -191,8 +272,21 @@ function render(){
   const div=document.createElement("div");div.className="record";
   div.innerHTML=`<b>${escapeHTML(r.Name||"(ohne Name)")}</b>
   <span class="small">${escapeHTML(r.Ort||"")} · ${escapeHTML(r["Zählernummer"]||"")} · ${escapeHTML(r.Filtertyp||"")} · ${escapeHTML(r.Ausgabedatum||"")}</span>`;
-  const b=document.createElement("button");b.textContent="Öffnen";b.addEventListener("click",()=>openRecord(i));
-  div.appendChild(b);els.list.appendChild(div);
+  const actions=document.createElement("div");
+  actions.className="summary-actions";
+
+  const openBtn=document.createElement("button");
+  openBtn.textContent="Öffnen";
+  openBtn.addEventListener("click",()=>openSummary(i));
+
+  const editBtn=document.createElement("button");
+  editBtn.textContent="Bearbeiten";
+  editBtn.addEventListener("click",()=>editRecord(i));
+
+  actions.appendChild(openBtn);
+  actions.appendChild(editBtn);
+  div.appendChild(actions);
+  els.list.appendChild(div);
  });
  if(!els.list.children.length)els.list.innerHTML='<span class="small">Keine Einträge gefunden.</span>';
 }
@@ -253,6 +347,18 @@ if("serviceWorker" in navigator){
 }
 window.addEventListener("online",()=>{ $("offlineBadge").textContent="online"; });
 window.addEventListener("offline",()=>{ $("offlineBadge").textContent="offline"; });
+
+
+$("summaryCloseBtn").addEventListener("click",closeSummary);
+$("summaryEditBtn").addEventListener("click",()=>{
+  if(summaryIndex!==null) editRecord(summaryIndex);
+});
+$("summaryModal").addEventListener("click",e=>{
+  if(e.target===$("summaryModal")) closeSummary();
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape") closeSummary();
+});
 
 newRecord();render();
 </script>
