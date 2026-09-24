@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a84ff">
+<meta name="theme-color" content="#f5f7fb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="PLC Filter">
@@ -12,128 +12,225 @@
 <title>PLC Filter</title>
 <style>
 :root{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  color-scheme:light dark;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  color-scheme:light;
+  --bg:#eef2f7; --bg-top:#f7f9fc; --card:#fff; --line:#dbe3ee;
+  --text:#172033; --muted:#667085; --blue:#2563eb; --blue-soft:#edf4ff;
+  --red:#e11d48; --red-soft:#fff0f3; --green:#18794e; --green-soft:#e9f9ef;
+  --orange:#9a6700; --orange-soft:#fff4e5;
 }
 *{box-sizing:border-box}
-body{margin:0;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom));background:#f4f4f7;color:#111}
-.card{background:white;border-radius:14px;padding:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-h1{font-size:22px;margin:0 0 14px}
-label{display:block;font-size:13px;font-weight:600;margin:10px 0 5px}
-input,select,textarea,button{
-  width:100%;box-sizing:border-box;font:inherit;border-radius:10px;border:1px solid #ccc;padding:11px;background:white;color:#111
+html{background:var(--bg)}
+body{
+  margin:0; min-height:100vh; color:var(--text);
+  background:linear-gradient(180deg,var(--bg-top) 0,var(--bg) 100%);
+  padding:max(16px,env(safe-area-inset-top)) 12px max(28px,env(safe-area-inset-bottom));
 }
-textarea{min-height:80px;resize:vertical}
-.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px}
-button{font-weight:600;min-height:44px;background:#fff}
-.primary{background:#0a84ff;color:white;border-color:#0a84ff}
-.danger{color:#b00020}
-.small{font-size:12px;color:#666;line-height:1.4}
-.record{padding:10px 0;border-bottom:1px solid #ddd}
-.record:last-child{border-bottom:none}
-.record b{display:block}
-.record button{margin-top:7px}
-.toggle{display:flex;gap:16px;margin-top:12px;flex-wrap:wrap}
-.toggle label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500}
-.toggle input{width:auto}
-.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#search{margin-bottom:8px}
-.badge{display:inline-block;font-size:11px;padding:3px 7px;border-radius:999px;background:#e8f2ff;color:#0a5fb4;margin-left:6px}
-
-.summary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.app{width:min(100%,760px); margin:0 auto}
+.hero{
+  padding:20px 20px 18px; margin-bottom:16px;
+  background:linear-gradient(135deg,#fff,#f0f6ff);
+  border:1px solid #dce7fb; border-radius:26px;
+  box-shadow:0 14px 34px rgba(37,99,235,.07);
+}
+.hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hero h1{margin:0;font-size:30px;line-height:1.08;letter-spacing:-.5px}
+.hero p{margin:7px 0 0;color:var(--muted);font-size:14px;line-height:1.4}
+.badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.badge{
+  display:inline-flex;align-items:center;min-height:28px;padding:5px 10px;
+  border-radius:999px;background:var(--blue-soft);color:#175cd3;
+  font-size:11px;font-weight:800;white-space:nowrap;
+}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:24px;
+  padding:18px; margin-bottom:16px; box-shadow:0 10px 30px rgba(15,23,42,.045);
+}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.card h2{margin:0;font-size:20px;letter-spacing:-.2px}
+.card-sub{color:var(--muted);font-size:12px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{min-width:0}
+.field.full{grid-column:1/-1}
+label{display:block;font-size:13px;font-weight:750;color:#475467;margin:0 0 6px}
+input,select,textarea,button{width:100%;font:inherit;box-sizing:border-box}
+input,select,textarea{
+  min-height:50px;padding:13px 14px;border:1px solid var(--line);border-radius:16px;
+  background:#fbfdff;color:var(--text);outline:none;
+  transition:border-color .15s,box-shadow .15s,background .15s;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:#8db8ff;background:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.10);
+}
+textarea{min-height:96px;resize:vertical}
+.custom-source{margin-top:8px}
+.toggle{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+.toggle label{
+  margin:0;display:flex;align-items:center;gap:8px;padding:10px 13px;
+  border-radius:999px;border:1px solid var(--line);background:#f8fafc;
+  font-weight:750;color:#344054;
+}
+.toggle input{width:auto;min-height:auto;accent-color:var(--blue)}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px}
+button{
+  min-height:46px;border:1px solid var(--line);border-radius:16px;
+  padding:12px 14px;background:#fff;color:var(--text);font-weight:800;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+}
+button:active{transform:translateY(1px)}
+.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.danger{background:var(--red-soft);border-color:#ffd5dc;color:var(--red)}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.help{margin:12px 0 0;color:var(--muted);font-size:12px;line-height:1.45}
+.status-line{margin:12px 0 0;min-height:18px;color:var(--muted);font-size:12px}
+.search-wrap{margin-bottom:12px}
+#search{background:#fff}
+.record{
+  padding:15px;margin:10px 0;border:1px solid #dce7fb;border-radius:19px;
+  background:#f8fbff;
+}
+.record-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.record-title{font-size:18px;font-weight:850;line-height:1.2}
+.record-meta{color:var(--muted);font-size:13px;line-height:1.45;margin-top:6px}
+.record-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.status-chip{font-size:11px;font-weight:800;padding:5px 9px;border-radius:999px;white-space:nowrap}
+.status-chip.loaned{background:var(--orange-soft);color:var(--orange)}
+.status-chip.billed{background:var(--green-soft);color:var(--green)}
+.summary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.summary-actions button{min-height:42px;padding:9px 12px;border-radius:13px}
+.empty-state{padding:22px;text-align:center;color:var(--muted);font-size:14px}
 .modal-backdrop{
-  position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;
-  align-items:flex-end;justify-content:center;padding:16px;z-index:9999
+  position:fixed;inset:0;background:rgba(15,23,42,.42);display:none;
+  align-items:flex-end;justify-content:center;padding:16px;z-index:9999;
 }
 .modal-backdrop.open{display:flex}
 .modal{
-  width:min(680px,100%);max-height:85vh;overflow:auto;
-  background:#fff;color:#111;border-radius:18px;padding:16px;
-  box-shadow:0 8px 30px rgba(0,0,0,.25)
+  width:min(680px,100%);max-height:86vh;overflow:auto;background:#fff;color:var(--text);
+  border-radius:26px;padding:18px;box-shadow:0 24px 60px rgba(15,23,42,.28);
 }
-.modal h2{margin:0 0 12px;font-size:20px}
-.summary-grid{display:grid;grid-template-columns:1fr;gap:8px}
-.summary-item{padding:9px 0;border-bottom:1px solid #e5e5ea}
-.summary-item:last-child{border-bottom:none}
-.summary-label{font-size:12px;font-weight:700;color:#666;margin-bottom:2px}
+.modal h2{margin:0 0 14px;font-size:22px}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.summary-item{padding:10px 0;border-bottom:1px solid #edf0f4}
+.summary-item.full{grid-column:1/-1}
+.summary-label{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:3px}
 .summary-value{white-space:pre-wrap;word-break:break-word}
-.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
-@media (min-width:560px){
- .summary-grid{grid-template-columns:1fr 1fr}
- .summary-item.full{grid-column:1 / -1}
-}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px}
 
-@media (prefers-color-scheme:dark){
- body{background:#111;color:#fff}
- .card,input,select,textarea,button{background:#1c1c1e;color:#fff;border-color:#444}
- .small{color:#aaa}
- .record{border-color:#333}
- .badge{background:#17324a;color:#8cc7ff}
- .modal{background:#1c1c1e;color:#fff}
- .summary-item{border-color:#333}
- .summary-label{color:#aaa}
+@media (max-width:640px){
+  body{padding-left:10px;padding-right:10px}
+  .app{width:100%}
+  .hero{padding:17px;border-radius:22px}
+  .hero-row{display:block}
+  .hero h1{font-size:27px}
+  .badges{justify-content:flex-start;margin-top:10px}
+  .card{padding:15px;border-radius:22px}
+  .form-grid{grid-template-columns:1fr}
+  .field.full{grid-column:auto}
+  .actions{grid-template-columns:1fr 1fr 1.15fr}
+  .toolbar{grid-template-columns:1fr}
+  .summary-grid{grid-template-columns:1fr}
+  .summary-item.full{grid-column:auto}
+  .modal{border-radius:24px 24px 18px 18px;padding:16px}
+}
+@media (max-width:390px){
+  .actions{grid-template-columns:1fr}
+  .record-head{display:block}
+  .record-chips{justify-content:flex-start;margin-top:8px}
 }
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>PLC Filter <span class="badge" id="offlineBadge">offline-fähig</span></h1>
+<main class="app">
+  <section class="hero">
+    <div class="hero-row">
+      <div>
+        <h1>PLC Filter</h1>
+        <p>Schnelle Filterverwaltung – übersichtlich am iPhone und am PC.</p>
+      </div>
+      <div class="badges">
+        <span class="badge" id="offlineBadge">offline-fähig</span>
+        <span class="badge">v8</span>
+      </div>
+    </div>
+  </section>
 
-  <label>Name</label><input id="name" autocomplete="name">
-  <label>Adresse</label><input id="address" autocomplete="street-address">
-  <label>Ort</label><input id="city" autocomplete="address-level2">
-  <label>Telefon</label><input id="phone" inputmode="tel" autocomplete="tel">
-  <label>Zählernummer</label><input id="meter" inputmode="numeric" maxlength="7">
-  <label>Störquelle</label>
-  <select id="sourceSelect">
-    <option>Netzteil</option>
-    <option>Frequenzumrichter</option>
-    <option>Wechselrichter</option>
-    <option>Eigener Text</option>
-  </select>
-  <input id="sourceCustom" placeholder="Eigene Störquelle eingeben …" style="display:none;margin-top:8px">
+  <section class="card">
+    <div class="card-head">
+      <h2>Schnelle Eingabe</h2>
+      <span class="card-sub">Neuer Filter oder Bearbeitung</span>
+    </div>
 
-  <label>Filtertyp</label>
-  <select id="filter">
-    <option>Steckdosenfilter</option>
-    <option>16A Hutschienenfilter</option>
-    <option>35A Hutschienenfilter</option>
-    <option>45A Hutschienenfilter</option>
-    <option>63A Hutschienenfilter</option>
-  </select>
+    <div class="form-grid">
+      <div class="field"><label for="name">Name</label><input id="name" autocomplete="name" placeholder="z. B. Max Mustermann"></div>
+      <div class="field"><label for="phone">Telefon</label><input id="phone" inputmode="tel" autocomplete="tel" placeholder="0664 …"></div>
+      <div class="field"><label for="address">Adresse</label><input id="address" autocomplete="street-address" placeholder="Straße / Hausnummer"></div>
+      <div class="field"><label for="city">Ort</label><input id="city" autocomplete="address-level2" placeholder="Ort"></div>
+      <div class="field"><label for="meter">Zählernummer</label><input id="meter" inputmode="numeric" maxlength="7" placeholder="7-stellig"></div>
 
-  <label>Ausgabedatum</label>
-  <input id="date" type="date">
+      <div class="field">
+        <label for="sourceSelect">Störquelle</label>
+        <select id="sourceSelect">
+          <option>Netzteil</option>
+          <option>Frequenzumrichter</option>
+          <option>Wechselrichter</option>
+          <option>Eigener Text</option>
+        </select>
+        <input id="sourceCustom" class="custom-source" placeholder="Eigene Störquelle eingeben …" style="display:none">
+      </div>
 
-  <div class="toggle">
-    <label><input id="billed" type="checkbox"> Verrechnet</label>
-    <label><input id="loaned" type="checkbox"> Geliehen</label>
-  </div>
+      <div class="field">
+        <label for="filter">Filtertyp</label>
+        <select id="filter">
+          <option>Steckdosenfilter</option>
+          <option>16A Hutschienenfilter</option>
+          <option>35A Hutschienenfilter</option>
+          <option>45A Hutschienenfilter</option>
+          <option>63A Hutschienenfilter</option>
+        </select>
+      </div>
 
-  <label>Zusatzinfo</label><textarea id="info"></textarea>
+      <div class="field"><label for="date">Ausgabedatum</label><input id="date" type="date"></div>
 
-  <div class="actions">
-    <button id="newBtn">Neu</button>
-    <button id="deleteBtn" class="danger">Löschen</button>
-    <button id="saveBtn" class="primary">Speichern</button>
-  </div>
-  <p id="status" class="small"></p>
-</div>
+      <div class="field full">
+        <div class="toggle">
+          <label><input id="billed" type="checkbox"> Verrechnet</label>
+          <label><input id="loaned" type="checkbox"> Geliehen</label>
+        </div>
+      </div>
 
-<div class="card">
-  <div class="toolbar">
-    <button id="exportBtn">CSV exportieren</button>
-    <button id="importBtn">CSV importieren</button>
-  </div>
-  <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
-  <p class="small">Die Datensätze werden lokal auf diesem Gerät gespeichert. Über CSV kannst du sie mit der PC-Version abgleichen.</p>
-</div>
+      <div class="field full"><label for="info">Zusatzinfo</label><textarea id="info" placeholder="Optionale Notiz …"></textarea></div>
+    </div>
 
-<div class="card">
-  <input id="search" placeholder="Suchen …">
-  <div id="list"></div>
-</div>
+    <div class="actions">
+      <button id="newBtn">Neu</button>
+      <button id="deleteBtn" class="danger">Löschen</button>
+      <button id="saveBtn" class="primary">Speichern</button>
+    </div>
+    <p id="status" class="status-line"></p>
+  </section>
 
+  <section class="card">
+    <div class="card-head">
+      <h2>Daten sichern & abgleichen</h2>
+      <span class="card-sub">CSV mit PC austauschen</span>
+    </div>
+    <div class="toolbar">
+      <button id="exportBtn">CSV exportieren</button>
+      <button id="importBtn">CSV importieren</button>
+    </div>
+    <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
+    <p class="help">Die Datensätze bleiben lokal auf diesem Gerät. Beim Export kannst du die CSV am iPhone direkt in „Dateien“ sichern oder teilen.</p>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Vorhandene Einträge</h2>
+      <span id="recordCount" class="card-sub">0 Einträge</span>
+    </div>
+    <div class="search-wrap"><input id="search" placeholder="Suchen nach Name, Ort, Zählernummer …"></div>
+    <div id="list"></div>
+  </section>
+</main>
 
 <div id="summaryModal" class="modal-backdrop" aria-hidden="true">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
@@ -147,6 +244,7 @@ button{font-weight:600;min-height:44px;background:#fff}
 </div>
 
 <script>
+
 const FIELDS=["Name","Adresse","Ort","Telefon","Zählernummer","Störquelle","Filtertyp","Ausgabedatum","Verrechnet","Geliehen","Zusatzinfo"];
 const KEY="plc_filter_records_v1";
 let records=JSON.parse(localStorage.getItem(KEY)||"[]");
@@ -290,12 +388,40 @@ function editRecord(i){
 function render(){
  const q=els.search.value.trim().toLowerCase();
  els.list.innerHTML="";
+ let shown=0;
+
  records.forEach((r,i)=>{
   const hay=Object.values(r).join(" ").toLowerCase();
   if(q && !hay.includes(q))return;
-  const div=document.createElement("div");div.className="record";
-  div.innerHTML=`<b>${escapeHTML(r.Name||"(ohne Name)")}</b>
-  <span class="small">${escapeHTML(r.Ort||"")} · ${escapeHTML(r["Zählernummer"]||"")} · ${escapeHTML(r.Filtertyp||"")} · ${escapeHTML(r.Ausgabedatum||"")}</span>`;
+  shown++;
+
+  const div=document.createElement("div");
+  div.className="record";
+
+  const head=document.createElement("div");
+  head.className="record-head";
+
+  const title=document.createElement("div");
+  title.className="record-title";
+  title.textContent=r.Name||"(ohne Name)";
+  head.appendChild(title);
+
+  const chips=document.createElement("div");
+  chips.className="record-chips";
+  if((r.Geliehen||"").toLowerCase()==="ja"){
+    const c=document.createElement("span"); c.className="status-chip loaned"; c.textContent="Geliehen"; chips.appendChild(c);
+  }
+  if((r.Verrechnet||"").toLowerCase()==="ja"){
+    const c=document.createElement("span"); c.className="status-chip billed"; c.textContent="Verrechnet"; chips.appendChild(c);
+  }
+  head.appendChild(chips);
+  div.appendChild(head);
+
+  const meta=document.createElement("div");
+  meta.className="record-meta";
+  meta.textContent=[r.Ort,r["Zählernummer"],r.Filtertyp,r.Ausgabedatum].filter(Boolean).join(" · ");
+  div.appendChild(meta);
+
   const actions=document.createElement("div");
   actions.className="summary-actions";
 
@@ -312,22 +438,53 @@ function render(){
   div.appendChild(actions);
   els.list.appendChild(div);
  });
- if(!els.list.children.length)els.list.innerHTML='<span class="small">Keine Einträge gefunden.</span>';
+
+ $("recordCount").textContent=`${shown} ${shown===1?"Eintrag":"Einträge"}`;
+ if(!shown)els.list.innerHTML='<div class="empty-state">Keine Einträge gefunden.</div>';
 }
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function csvEscape(v){
  v=String(v??"");
  return /[;"\n\r]/.test(v)?`"${v.replace(/"/g,'""')}"`:v;
 }
-function exportCSV(){
+async function exportCSV(){
  const rows=[FIELDS.join(";")];
  for(const r of records) rows.push(FIELDS.map(f=>csvEscape(r[f]||"")).join(";"));
+
+ const now=new Date();
+ const p=n=>String(n).padStart(2,"0");
+ const stamp=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())}_${p(now.getHours())}-${p(now.getMinutes())}`;
+ const filename=`PLC-Filter_${stamp}.csv`;
+
  const blob=new Blob(["\ufeff"+rows.join("\r\n")],{type:"text/csv;charset=utf-8"});
+ const file=new File([blob],filename,{type:"text/csv"});
+
+ try{
+   if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+     await navigator.share({
+       title:"PLC Filter CSV",
+       text:"PLC-Filter Datenbank exportieren",
+       files:[file]
+     });
+     els.status.textContent="CSV zum Teilen vorbereitet.";
+     return;
+   }
+ }catch(err){
+   if(err && err.name==="AbortError"){
+     els.status.textContent="Export abgebrochen.";
+     return;
+   }
+ }
+
+ const url=URL.createObjectURL(blob);
  const a=document.createElement("a");
- a.href=URL.createObjectURL(blob);
- a.download="PLC-Filter.csv";
- document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+ a.href=url;
+ a.download=filename;
+ document.body.appendChild(a);
+ a.click();
+ a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1500);
+ els.status.textContent="CSV wurde als Download bereitgestellt.";
 }
 function parseCSV(text){
  text=text.replace(/^\uFEFF/,"");
@@ -371,7 +528,12 @@ $("fileInput").addEventListener("change",e=>{if(e.target.files[0])importCSV(e.ta
 els.search.addEventListener("input",render);
 
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));
+  window.addEventListener("load",async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register("./service-worker.js?v=8",{updateViaCache:"none"});
+      await reg.update();
+    }catch(e){}
+  });
 }
 window.addEventListener("online",()=>{ $("offlineBadge").textContent="online"; });
 window.addEventListener("offline",()=>{ $("offlineBadge").textContent="offline"; });
@@ -389,6 +551,7 @@ document.addEventListener("keydown",e=>{
 });
 
 newRecord();render();
+
 </script>
 </body>
 </html>
